@@ -1,0 +1,11 @@
+{
+  "diagnostics.libraryFiles": "Disable",
+  "runtime.version": "LuaJIT",
+  "workspace.checkThirdParty": "Disable",
+  "workspace.library": [
+    "$VIMRUNTIME/lua",
+    "${env:LOCALAPPDATA}/nvim-data/lazy/snacks.nvim/lua",
+    "${env:HOME}/.local/share/nvim/lazy/snacks.nvim/lua",
+    "lua/dotnet-test-traitor/types.lua"
+  ]
+}
