@@ -1,8 +1,8 @@
 # Dotnet Test Traitor
 
-Simply test runner for .NET projects which lets you run selected tests by defined filters.
+Simple test runner for .NET projects which lets you run selected tests with defined filters.
 
-Sample for xunit where you can define `Trait` for your tests in order to categorize it:
+Sample for xunit where you can define `Trait` for your tests in order to categorize them:
 
 ```csharp
 using Xunit;
@@ -15,10 +15,13 @@ public void SampleTest()
 }
 ```
 
-In order to run this test you would typically run `dotnet test --filter='Category=Integration'`.
+In order to run test only with this trait, you would typically run `dotnet test --filter='Category=Integration'`.
 This plugin simplifies it by allowing you predefine filters which can later be selected. Failed tests will by inserted in quickfix list which allows to quickly find them and fix.
 
-It uses `Snacks.picker` for filter selection and `trouble.nvim` for displaying failed tests in quick fix list.
+It uses :
+- `snacks.picker` for filter selection, 
+- `trouble.nvim` for displaying failed tests in quick fix list, 
+- `roslyn.nvim` to discover solution path via `vim.g.roslyn_nvim_selected_solution`
 ![alt text](image.png)
 
 ## Installation
