@@ -24,10 +24,23 @@ function M.setup(user_opts)
         local qflist = require("dotnet-test-traitor.qflist")
 
         picker.pick_filter(function(filter)
-          runner.run_tests(filter, function(logFilePath)
-            parser.parse_test_result(logFilePath, function(matches)
-              qflist.set_qflist(matches)
-              os.remove(logFilePath)
+          runner.run_tests(filter, function(results_directory_path)
+            parser.parse_test_result(results_directory_path, function(summary)
+              if summary.failed > 0 then
+                qflist.set_qflist(summary.tests)
+              else
+                vim.notify(
+                  string.format(
+                    "Test summary: Total: %s, Failed: %s, Succeeded: %s",
+                    summary.total,
+                    summary.failed,
+                    summary.passed
+                  ),
+                  vim.log.levels.INFO
+                )
+              end
+
+              os.remove(results_directory_path)
             end)
           end)
         end)

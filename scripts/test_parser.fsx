@@ -7,8 +7,6 @@ open System.Xml
 open Newtonsoft.Json
 open Newtonsoft.Json.Linq
 
-type test = private NaturalNumber of int
-
 type TestResult =
     {   Id: Guid
         Outcome: string
@@ -17,6 +15,12 @@ type TestResult =
         StackTrace: string
         Message: string
         StdOut: string }
+
+type TestSummary =
+    { Total: int
+      Passed: int
+      Failed: int
+      Tests: TestResult seq }
 
 let xmlToJson (xml: string) : JObject =
     let xmlDoc = XmlDocument()
@@ -93,31 +97,32 @@ let extractAndTransformResults (jsonObj: JObject) : seq<TestResult> option =
 
 let main (argv: string[]) =
     if argv.Length <> 1 then
-        printfn "Usage: fsi test_parser.fsx <xml-file-path>"
+        printfn "Usage: fsi test_parser.fsx <xml-results-directory>"
         1
     else
         try
-            let filePath = argv[0]
-            if File.Exists(filePath) then
-                let xmlContent = File.ReadAllText(filePath)
-                let jsonObj = xmlToJson(xmlContent)
-                match extractAndTransformResults(jsonObj) with
-                | Some results ->
-                    printf  "%s" (JsonConvert.SerializeObject(results, jsonSerializerSettings))
-                    // use writer = new StreamWriter(outputFilePath, append = true)
-                    // for result in results do
-                    //     let resultJson = JsonConvert.SerializeObject(result)
-                    //     writer.WriteLine(resultJson)
-                    0
-                | None ->
-                    printfn "Error: 'Results' object not found in the JSON output."
-                    1
+            let directoryPath = argv[0]
+            if Directory.Exists(directoryPath) then
+               let mutable summary = { Total = 0; Passed = 0; Failed = 0; Tests = [||] }
+               for file in Directory.GetFiles(directoryPath, "*.trx") do
+                   let xmlContent = File.ReadAllText(file)
+                   let jsonObj = xmlToJson(xmlContent)
+                   match extractAndTransformResults(jsonObj) with
+                   | Some results ->
+                       let totalCount = summary.Total + Seq.length results
+                       let passedCount = summary.Passed + (results |> Seq.filter (fun r -> r.Outcome.Equals("passed", StringComparison.OrdinalIgnoreCase)) |> Seq.length)
+                       let failedCount = summary.Failed + (results |> Seq.filter (fun r -> r.Outcome.Equals("failed", StringComparison.OrdinalIgnoreCase)) |> Seq.length)
+                       let combinedTests = Seq.append summary.Tests results
+                       summary <- { Total = totalCount; Passed = passedCount; Failed = failedCount; Tests = combinedTests }
+                   | None -> ()
+               printf  "%s" (JsonConvert.SerializeObject(summary, jsonSerializerSettings))
+               0
             else
-                printfn "Error: File not found - %s" filePath
+                printfn "Error: Directory not found - %s" directoryPath
                 1
         with
         | ex ->
             printfn "Error: %s" ex.Message
             1
 
-main fsi.CommandLineArgs[1..]
+exit (main fsi.CommandLineArgs[1..])

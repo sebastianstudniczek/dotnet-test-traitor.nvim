@@ -1,11 +1,11 @@
 local M = {}
 
----@param xml_path string Path to the .trx file
----@param cb fun(results: dotnet-test-traitor.TestCaseResult[]) Callback to handle parsed results
-M.parse_test_result = function(xml_path, cb)
+---@param results_directory_path string Path to the directory containing .trx files
+---@param cb fun(results: dotnet-test-traitor.TestSummary) Callback to handle parsed results
+M.parse_test_result = function(results_directory_path, cb)
   local script_path = vim.api.nvim_get_runtime_file("scripts/test_parser.fsx", true)[1]
-  local command = string.format("dotnet fsi %s %s", script_path, xml_path)
-  local spinner = require("easy-dotnet.ui-modules.spinner").new()
+  local command = string.format("dotnet fsi %s %s", script_path, results_directory_path)
+  local spinner = require("dotnet-test-traitor.spinner").new()
   spinner:start_spinner("Parsing test results")
 
   local stderr = {}

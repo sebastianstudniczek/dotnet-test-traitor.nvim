@@ -19,9 +19,10 @@ In order to run this test you would typically run `dotnet test --filter='Categor
 This plugin simplifies it by allowing you predefine filters which can later be selected. Failed tests will by inserted in quickfix list which allows to quickly find them and fix.
 
 It uses `Snacks.picker` for filter selection and `trouble.nvim` for displaying failed tests in quick fix list.
-![alt text](picker.png)
+![alt text](image.png)
 
 ## Installation
+
 
 ### lazy.nvim
 

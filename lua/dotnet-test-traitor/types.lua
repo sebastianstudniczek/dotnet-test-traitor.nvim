@@ -12,3 +12,9 @@
 --- @field lineNumber number
 --- @field stdOut string
 --- @field message string
+
+--- @class dotnet-test-traitor.TestSummary
+--- @field total number
+--- @field failed number
+--- @field passed number
+--- @field tests dotnet-test-traitor.TestResult[]
