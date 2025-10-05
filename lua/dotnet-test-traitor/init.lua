@@ -40,7 +40,7 @@ function M.setup(user_opts)
                 )
               end
 
-              os.remove(results_directory_path)
+              vim.fn.delete(results_directory_path, "rf")
             end)
           end)
         end)
