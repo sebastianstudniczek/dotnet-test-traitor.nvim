@@ -49,7 +49,7 @@ It integrates with:
     filters = {
       {
         name = "Unit Tests",
-        value = "(Category!=Manual&Category!=E2E&Category!=Integration&Category!=Performance&Category!=Service)|(Type=Service-InMemory)",
+        value = "Category!=Manual&Category!=E2E&Category!=Integration&Category!=Performance&Category!=Service|Type=Service-InMemory",
       },
       { name = "Integration", value = "Category=Integration" },
       { name = "E2E Tests", value = "Category=E2E" },
