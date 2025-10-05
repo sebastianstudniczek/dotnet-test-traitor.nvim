@@ -7,11 +7,11 @@ M.pick_filter = function(cb)
   ---@type snacks.picker.finder.Item[]
   local picker_items = {}
 
-  vim.inspect(opts.filters)
   for i, filter in ipairs(opts.filters) do
     table.insert(picker_items, {
       idx = i,
-      text = filter.name,
+      formatted = filter.name,
+      text = i .. " " .. filter.name,
       value = filter.value,
     })
   end
@@ -24,8 +24,12 @@ M.pick_filter = function(cb)
       source = "Test filters",
       items = picker_items,
       format = function(item, _)
+        ---@type snacks.picker.Highlight[]
         local ret = {}
-        ret[#ret + 1] = { item.text, "SnacksPickerLabel" }
+        local idx = tostring(item.idx)
+        ret[#ret + 1] = { idx .. ".", "SnacksPickerIdx" }
+        ret[#ret + 1] = { " " }
+        ret[#ret + 1] = { item.formatted, "SnacksPickerLabel" }
         ret[#ret + 1] = { string.rep(" ", padding - #item.text), virtual = true }
         ret[#ret + 1] = { item.value, "SnacksPickerComment" }
         return ret
