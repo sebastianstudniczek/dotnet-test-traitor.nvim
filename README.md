@@ -59,7 +59,7 @@ It integrates with:
 ```
 
 You can define your own filters in the configuration under the `opts.filters` field.
-Each filter has a name (used for display) and a value — a filter expression passed to the `dotnet test --filter` command.
+Each filter has a `name` (used for display) and a `value` — a filter expression passed to the `dotnet test --filter` command.
 
 ## Key Bindings
 
