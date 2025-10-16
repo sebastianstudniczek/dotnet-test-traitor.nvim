@@ -10,7 +10,7 @@ M.run_tests = function(filter, cb)
 
   local filterCmd = #filter > 0 and string.format("--filter '%s'", filter) or ""
   local testCommand = string.format(
-    "dotnet test %s --nologo --no-build --no-restore %s --logger='trx' --results-directory '%s'",
+    "dotnet test %s --nologo %s --logger='trx' --results-directory '%s'",
     vim.g.roslyn_nvim_selected_solution or "",
     filterCmd,
     results_directory
