@@ -55,14 +55,11 @@ It integrates with:
       { name = "E2E Tests", value = "Category=E2E" },
     },
   },
+    keys = {
+      { "<leader>tc", "<Plug>(DotnetTestTraitorRun)", mode = "n", desc = "Run Test Category (Dotnet)" },
+    },
 },
 ```
 
 You can define your own filters in the configuration under the `opts.filters` field.
 Each filter has a `name` (used for display) and a `value` — a filter expression passed to the `dotnet test --filter` command.
-
-## Key Bindings
-
-The following key binding is set by default to run tests by a selected filter:
-
-`<leader>tc` — Run Test Category
