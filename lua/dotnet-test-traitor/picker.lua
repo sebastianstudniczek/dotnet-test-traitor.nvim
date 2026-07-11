@@ -7,7 +7,7 @@ M.pick_filter = function(cb)
   vim.ui.select(opts.filters, {
     prompt = "Select filter:",
     format_item = function(item)
-      return ("%s %s"):format(item.name, item.value)
+      return ("%s (%s)"):format(item.name, item.value)
     end,
   }, function(choice)
     cb(choice)

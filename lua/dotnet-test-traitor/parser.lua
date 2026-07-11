@@ -21,18 +21,20 @@ M.parse_test_result = function(results_directory_path, cb)
     end,
     on_exit = function(_, code)
       if code ~= 0 then
-        spinner:stop_spinner("Parsing tests failed with exit code " .. code, vim.log.levels.ERROR)
+        spinner.message = "failed with exit code " .. code
+        spinner:finish()
         vim.notify(table.concat(stderr, "\n"), vim.log.levels.ERROR)
         return
       end
 
       local ok, decoded = pcall(vim.fn.json_decode, stdout)
       if ok and decoded then
-        spinner:stop_spinner("Test results parsed successfully")
+        spinner.message = "parsed successfully"
         cb(decoded)
       else
-        spinner:stop_spinner("Failed to decode json ", vim.log.levels.ERROR)
+        spinner.message = "failed to decode json"
       end
+      spinner:finish()
     end,
   })
 end
