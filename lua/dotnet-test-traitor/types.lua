@@ -1,6 +1,7 @@
 --- @class dotnet-test-traitor.TestFilter
 --- @field name string
 --- @field value string
+--- @field is_vstest boolean|nil
 
 --- @class dotnet-test-traitor.Configuration
 --- @field filters dotnet-test-traitor.TestFilter[]

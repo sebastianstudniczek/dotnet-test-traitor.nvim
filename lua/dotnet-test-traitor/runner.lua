@@ -1,30 +1,64 @@
 local M = {}
 
----@param filter string Test filter to apply
+---@param filter dotnet-test-traitor.TestFilter
+local function get_filter_cmd(filter)
+  if #filter.value == 0 then
+    return ""
+  end
+
+  if filter.is_vstest then
+    return string.format("--filter '%s'", filter.value)
+  else
+    return string.format("--treenode-filter '%s'", filter.value)
+  end
+end
+
+---@param filter dotnet-test-traitor.TestFilter Test filter to apply
 ---@param cb fun(logFilePath: string) Callback to handle the path to the test results log file
 M.run_tests = function(filter, cb)
   local results_directory = vim.loop.os_tmpdir() .. "/nvim/dotnet-test-traitor/tests_results_" .. os.time()
   vim.fn.mkdir(results_directory, "p")
-  local spinner = require("dotnet-test-traitor.spinner").new()
-  spinner:start_spinner("Running tests")
+  local spinner = require("fidget.progress").handle.create({
+    title = "Running tests",
+    message = "running",
+    lsp_client = {
+      name = "dotnet-test-traitor",
+    },
+  })
 
-  local filterCmd = #filter > 0 and string.format("--filter '%s'", filter) or ""
-  local testCommand = string.format(
-    "dotnet test %s --nologo %s --logger='trx' --results-directory '%s'",
-    vim.g.roslyn_nvim_selected_solution or "",
-    filterCmd,
-    results_directory
-  )
+  local filter_cmd = get_filter_cmd(filter)
+  local logger_cmd = filter.is_vstest and "--logger 'trx'" or "--report-trx"
+  local testCommand =
+    string.format("dotnet test %s %s --results-directory '%s'", filter_cmd, logger_cmd, results_directory)
 
-  vim.notify("Executing: " .. testCommand, vim.log.levels.INFO)
+  vim.notify("Executing: " .. testCommand, vim.log.levels.TRACE)
 
-  vim.fn.jobstart(testCommand, {
-    on_exit = function(_, _)
+  local output = {}
+
+  ---@type vim.fn.jobstart.Opts
+  local job_opts = {
+    on_stdout = function(_, data)
+      vim.list_extend(output, data)
+    end,
+    on_stderr = function(_, data)
+      vim.list_extend(output, data)
+    end,
+    on_exit = function(_, exit_code)
       -- Not checking exit code since it will return non-zero if any tests fail
-      spinner:stop_spinner("Tests completed")
+      if exit_code == 1 then
+        spinner.message = "failed"
+        vim.notify(output, "error")
+        return
+      end
+      spinner.message = "completed"
+      spinner:finish()
       cb(results_directory)
     end,
-  })
+    stderr_buffered = true,
+    stdout_buffered = true,
+  }
+
+  vim.fn.jobstart(testCommand, job_opts)
 end
 
 return M
