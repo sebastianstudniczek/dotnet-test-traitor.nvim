@@ -70,7 +70,7 @@ Each filter has a `name` (used for display) and a `value` — a filter expressio
 
 ## Remote usage
 
-It's possible to invoke test execution from outside nvim. For example from git hook
+It's possible to invoke test execution from outside nvim. For example from git hook.
 
 To store neovim address you can use autocmd like this:
 
@@ -95,11 +95,14 @@ vim.api.nvim_create_autocmd("VimEnter", {
 })
 ```
 
+and later invoke it via:
+
 ```bash
 if [ -f .nvim.server ]; then
  SERVER=$(cat .nvim.server)
  FILTER="/*/*/*/*[Category!=Service]"
 
- nvim --server "$SERVER" --remote-send "<Cmd>DotnetTestTraitorRun $FILTER<CR>"
+  # v:true argument to run this synchronously and wait for the result
+ nvim --headless --server "$SERVER" --remote-expr "v:lua.require('dotnet-test-traitor.run')({ 'value': '$FILTER' }, v:true)"
 fi
 ```

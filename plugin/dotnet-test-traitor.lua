@@ -8,15 +8,8 @@ vim.api.nvim_create_autocmd("FileType", {
       local picker = require("dotnet-test-traitor.picker")
 
       picker.pick_filter(function(filter)
-        require("dotnet-test-traitor.run")(filter)
+        require("dotnet-test-traitor.run")({ value = filter }, false)
       end)
     end, { buffer = event.buf, desc = "Run Test Category" })
   end,
-})
-
-vim.api.nvim_create_user_command("DotnetTestTraitorRun", function(opts)
-  -- TODO: Support passing `is_vstest` argument
-  require("dotnet-test-traitor.run")({ value = opts.args })
-end, {
-  nargs = 1,
 })

@@ -15,6 +15,7 @@ end
 
 ---@param filter dotnet-test-traitor.TestFilter Test filter to apply
 ---@param cb fun(logFilePath: string) Callback to handle the path to the test results log file
+---@return number jobId
 M.run_tests = function(filter, cb)
   local results_directory = vim.loop.os_tmpdir() .. "/nvim/dotnet-test-traitor/tests_results_" .. os.time()
   vim.fn.mkdir(results_directory, "p")
@@ -58,7 +59,7 @@ M.run_tests = function(filter, cb)
     stdout_buffered = true,
   }
 
-  vim.fn.jobstart(testCommand, job_opts)
+  return vim.fn.jobstart(testCommand, job_opts)
 end
 
 return M
