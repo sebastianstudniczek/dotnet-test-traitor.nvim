@@ -99,10 +99,18 @@ and later invoke it via:
 
 ```bash
 if [ -f .nvim.server ]; then
- SERVER=$(cat .nvim.server)
- FILTER="/*/*/*/*[Category!=Service]"
+  FILTER="/*/*/*/*[Category!=Service]"
+  RESULT_FILE=$(mktemp)
 
-  # v:true argument to run this synchronously and wait for the result
- nvim --headless --server "$SERVER" --remote-expr "v:lua.require('dotnet-test-traitor.run')({ 'value': '$FILTER' }, v:true)"
+  trap 'rm -f "$RESULT_FILE"' EXIT
+
+  nvim --headless --server "$SERVER" --remote-expr "v:lua.require('dotnet-test-traitor.run')({ 'value': '$FILTER' }, '$RESULT_FILE')" > /dev/null
+
+  while [ ! -s "$RESULT_FILE" ]; do
+    sleep 0.2
+  done
+
+  EXIT_CODE=$(cat "$RESULT_FILE")
+  exit "$EXIT_CODE"
 fi
 ```
