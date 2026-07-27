@@ -1,14 +1,27 @@
 ---@param filter dotnet-test-traitor.TestFilter
----@param run_sync boolean
-return function(filter, run_sync)
+---@param result_path_file string|nil
+return function(filter, result_path_file)
   local runner = require("dotnet-test-traitor.runner")
   local parser = require("dotnet-test-traitor.parser")
   local qflist = require("dotnet-test-traitor.qflist")
 
+  local function finish(exit_code)
+    if result_path_file then
+      local f = io.open(result_path_file, "w")
+      if f then
+        f:write(tostring(exit_code))
+        f:close()
+      end
+    end
+  end
+
   local job_id = runner.run_tests(filter, function(results_directory_path)
     parser.parse_test_result(results_directory_path, function(summary)
+      local exit_code
+
       if summary.failed > 0 then
         qflist.set_qflist(summary.tests)
+        exit_code = 1
       else
         vim.notify(
           string.format(
@@ -19,20 +32,15 @@ return function(filter, run_sync)
           ),
           vim.log.levels.INFO
         )
+        exit_code = 0
       end
 
       vim.fn.delete(results_directory_path, "rf")
+      finish(exit_code)
     end)
   end)
 
   if job_id <= 0 then
     return 1 -- failed to start job
   end
-
-  if run_sync then
-    local exit_codes = vim.fn.jobwait({ job_id })
-    return exit_codes[1]
-  end
-
-  return nil
 end
