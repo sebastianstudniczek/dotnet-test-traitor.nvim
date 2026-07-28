@@ -15,13 +15,17 @@ return function(filter, result_path_file)
     end
   end
 
-  local job_id = runner.run_tests(filter, function(results_directory_path)
+  local job_id = runner.run_tests(filter, function(run_exit_code, results_directory_path)
+    if run_exit_code == 1 then
+      finish(run_exit_code)
+    end
+
     parser.parse_test_result(results_directory_path, function(summary)
-      local exit_code
+      local parse_exit_code
 
       if summary.failed > 0 then
         qflist.set_qflist(summary.tests)
-        exit_code = 1
+        parse_exit_code = 1
       else
         vim.notify(
           string.format(
@@ -32,11 +36,11 @@ return function(filter, result_path_file)
           ),
           vim.log.levels.INFO
         )
-        exit_code = 0
+        parse_exit_code = 0
       end
 
       vim.fn.delete(results_directory_path, "rf")
-      finish(exit_code)
+      finish(parse_exit_code)
     end)
   end)
 
