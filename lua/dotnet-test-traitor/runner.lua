@@ -1,67 +1,107 @@
 local M = {}
 
 ---@param filter dotnet-test-traitor.TestFilter
-local function get_filter_cmd(filter)
+---@return string[]
+local function get_filter_args(filter)
   if #filter.value == 0 then
-    return ""
+    return {}
   end
 
   if filter.is_vstest then
-    return string.format("--filter '%s'", filter.value)
+    return { "--filter", filter.value }
   else
-    return string.format("--treenode-filter '%s'", filter.value)
+    return { "--treenode-filter", filter.value }
   end
 end
 
+---@param cb fun(result: vim.SystemCompleted)
+local function build(cb)
+  vim.system({ "dotnet", "build", "/clp:ErrorsOnly" }, {
+    text = true,
+  }, function(result)
+    local output = result.stdout .. "\n" .. result.stderr
+    local lines = vim.split(output, "\n", { plain = true })
+
+    vim.schedule(function()
+      vim.fn.setqflist({}, " ", {
+        title = "dotnet build",
+        lines = lines,
+        efm = table.concat({
+          "%f(%l\\,%c): %trror %m",
+          "%f(%l): %trror %m",
+          "%-G%.%#", -- ignore-other lines
+        }, ","),
+      })
+
+      if result.code ~= 0 then
+        vim.cmd("copen")
+      end
+
+      cb(result)
+    end)
+  end)
+end
+
 ---@param filter dotnet-test-traitor.TestFilter Test filter to apply
----@param cb fun(runner_exit_code: number, logFilePath: string) Callback to handle the path to the test results log file
----@return number jobId
-M.run_tests = function(filter, cb)
-  local results_directory = vim.loop.os_tmpdir() .. "/nvim/dotnet-test-traitor/tests_results_" .. os.time()
-  vim.fn.mkdir(results_directory, "p")
+---@param args string[]|nil Additional arguments passed into `dotnet test` command
+---@param cb fun(runner_exit_code: number, logFilePath: string, progress) Callback to handle the path to the test results log file
+M.run_tests = function(filter, args, cb)
   local spinner = require("fidget.progress").handle.create({
     title = "Running tests",
-    message = "running",
+    message = "building project",
     lsp_client = {
       name = "dotnet-test-traitor",
     },
   })
 
-  local filter_cmd = get_filter_cmd(filter)
-  local logger_cmd = filter.is_vstest and "--logger 'trx'" or "--report-trx --ignore-exit-code 8"
-  local testCommand =
-    string.format("dotnet test %s %s --results-directory '%s'", filter_cmd, logger_cmd, results_directory)
-
-  vim.notify("Executing: " .. testCommand, vim.log.levels.TRACE)
-
-  local output = {}
-
-  ---@type vim.fn.jobstart.Opts
-  local job_opts = {
-    on_stdout = function(_, data)
-      vim.list_extend(output, data)
-    end,
-    on_stderr = function(_, data)
-      vim.list_extend(output, data)
-    end,
-    on_exit = function(_, exit_code)
-      -- if there are different error codes then `1` works as an aggregated result
-      if exit_code == 1 then
-        spinner.message = "failed"
-        spinner:finish()
-        vim.notify(table.concat(output, "\n"), "error")
-        cb(exit_code, results_directory)
-        return
-      end
-      spinner.message = "completed"
+  build(function(build_result)
+    if build_result.code ~= 0 then
+      spinner.message = "build failed"
       spinner:finish()
-      cb(exit_code, results_directory)
-    end,
-    stderr_buffered = true,
-    stdout_buffered = true,
-  }
 
-  return vim.fn.jobstart(testCommand, job_opts)
+      cb(build_result.code, "", spinner)
+      return
+    end
+
+    spinner.message = "running tests"
+
+    local results_directory = vim.loop.os_tmpdir() .. "/nvim/dotnet-test-traitor/tests_results_" .. os.time()
+    vim.fn.mkdir(results_directory, "p")
+
+    local test_command = {
+      "dotnet",
+      "test",
+      "--no-build",
+    }
+
+    vim.list_extend(test_command, get_filter_args(filter))
+
+    if filter.is_vstest then
+      vim.list_extend(test_command, { "--logger", "trx" })
+    else
+      table.insert(test_command, "--report-trx")
+    end
+
+    vim.list_extend(test_command, { "--results-directory", results_directory })
+    vim.list_extend(test_command, args or {})
+
+    vim.notify("Executing: " .. vim.inspect(test_command), vim.log.levels.TRACE)
+
+    vim.system(test_command, { text = true }, function(result)
+      vim.schedule(function()
+        if result.code ~= 0 then
+          spinner.message = "test run failed"
+          spinner:finish()
+
+          vim.notify(result.stdout .. result.stderr, vim.log.levels.ERROR)
+        else
+          spinner.message = "test run completed"
+        end
+
+        cb(result.code, results_directory, spinner)
+      end)
+    end)
+  end)
 end
 
 return M
