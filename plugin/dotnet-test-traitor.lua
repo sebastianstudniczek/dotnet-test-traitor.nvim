@@ -8,7 +8,7 @@ vim.api.nvim_create_autocmd("FileType", {
       local picker = require("dotnet-test-traitor.picker")
 
       picker.pick_filter(function(filter)
-        require("dotnet-test-traitor.run")({ value = filter }, false)
+        require("dotnet-test-traitor.run")({ value = filter })
       end)
     end, { buffer = event.buf, desc = "Run Test Category" })
   end,
