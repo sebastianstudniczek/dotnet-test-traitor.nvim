@@ -34,7 +34,7 @@ local function build(cb)
       })
 
       if result.code ~= 0 then
-        require("trouble").open({ mode = "quickfix", focus = false })
+        vim.cmd("copen")
       end
 
       cb(result)
