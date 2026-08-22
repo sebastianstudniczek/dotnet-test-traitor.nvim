@@ -2,6 +2,7 @@ local runner = require("dotnet-test-traitor.runner")
 local parser = require("dotnet-test-traitor.parser")
 local qflist = require("dotnet-test-traitor.qflist")
 local async = require("dotnet-test-traitor.async")
+local log = require("dotnet-test-traitor.log")
 
 ---@param filter dotnet-test-traitor.TestFilter
 ---@param result_path_file? string file to which write exit code
@@ -33,6 +34,7 @@ return function(filter, result_path_file, args)
   ---@param is_finish? boolean
   local function set_progress(message, is_finish)
     spinner.message = message
+    log.info("Progress: %s", message)
 
     if is_finish then
       spinner:finish()
@@ -73,15 +75,14 @@ return function(filter, result_path_file, args)
     if any_test_failed then
       qflist.set_qflist(test_summary.tests)
     else
-      vim.notify(
-        string.format(
-          "Test summary: Total: %s, Failed: %s, Succeeded: %s",
-          test_summary.total,
-          test_summary.failed,
-          test_summary.passed
-        ),
-        vim.log.levels.INFO
+      local msg = string.format(
+        "Test summary: Total: %s, Failed: %s, Succeeded: %s",
+        test_summary.total,
+        test_summary.failed,
+        test_summary.passed
       )
+      log.info(msg)
+      vim.notify(msg, vim.log.levels.INFO)
     end
 
     finish(any_test_failed and 1 or 0)

@@ -1,6 +1,7 @@
 local M = {}
 
 local async = require("dotnet-test-traitor.async")
+local log = require("dotnet-test-traitor.log")
 
 ---@param filter dotnet-test-traitor.TestFilter
 ---@return string[]
@@ -74,13 +75,13 @@ end
 ---@return boolean success, string trx_results_directory
 M.run_tests = function(filter, args)
   local test_command, trx_resulsts_directory = prepare_test_cmd(filter, args)
-  vim.notify("Executing: " .. vim.inspect(test_command), vim.log.levels.TRACE)
+  log.debug("Executing: %s", vim.inspect(test_command))
 
   local test_result = async.system(test_command, { text = true })
   -- 2 - at least one test failed
   local success = test_result.code == 2 or test_result.code == 0
   if not success then
-    vim.notify(test_result.stdout .. test_result.stderr, vim.log.levels.ERROR)
+    log.error("Test execution failed: %s%s", test_result.stdout, test_result.stderr)
   end
 
   return success, trx_resulsts_directory

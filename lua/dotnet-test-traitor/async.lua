@@ -1,4 +1,5 @@
 local M = {}
+local log = require("dotnet-test-traitor.log")
 
 ---@param cmd string[]
 ---@param opts? vim.SystemOpts
@@ -12,7 +13,9 @@ M.system = function(cmd, opts)
       local ok, err = coroutine.resume(co, result)
 
       if not ok then
-        vim.notify(debug.traceback(co, err), vim.log.levels.ERROR)
+        local tb = debug.traceback(co, err)
+        log.error("Async error: %s", tb)
+        vim.notify(tb, vim.log.levels.ERROR)
       end
     end)
   end)
@@ -26,7 +29,9 @@ M.run = function(fn)
 
   local ok, err = coroutine.resume(co)
   if not ok then
-    vim.notify(debug.traceback(co, err), vim.log.levels.ERROR)
+    local tb = debug.traceback(co, err)
+    log.error("Async run error: %s", tb)
+    vim.notify(tb, vim.log.levels.ERROR)
   end
 end
 
