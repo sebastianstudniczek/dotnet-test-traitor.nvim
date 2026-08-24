@@ -1,3 +1,5 @@
 /luarocks
 /lua_modules
 /.luarocks
+[Bb]in/
+[Oo]bj/

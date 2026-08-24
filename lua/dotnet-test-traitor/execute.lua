@@ -42,49 +42,47 @@ return function(filter, result_path_file, args)
   end
 
   async.run(function()
-    set_progress("building project")
-    local build_resuilt = runner.build()
+    local ok, err = xpcall(function()
+      set_progress("running tests")
+      local test_run_succeded, trx_results_directory = runner.run_tests(filter, args)
 
-    if not build_resuilt then
-      set_progress("build failed")
+      if not test_run_succeded or trx_results_directory == nil then
+        set_progress("test run failed", true)
+        finish(1)
+        return
+      end
+
+      set_progress("parsing test result", false)
+      local parse_succeded, test_summary = parser.parse_test_result(trx_results_directory)
+
+      if not parse_succeded or not test_summary then
+        set_progress("parsing trx report(s) failed", true)
+        finish(1, trx_results_directory)
+        return
+      end
+
+      set_progress("trx report(s) parsed", true)
+
+      local any_test_failed = test_summary.failed > 0
+      if any_test_failed then
+        qflist.set_qflist(test_summary.tests)
+      else
+        local msg = string.format(
+          "Test summary: Total: %s, Failed: %s, Succeeded: %s",
+          test_summary.total,
+          test_summary.failed,
+          test_summary.passed
+        )
+        log.info(msg)
+        vim.notify(msg, vim.log.levels.INFO)
+      end
+
+      finish(any_test_failed and 1 or 0, trx_results_directory)
+    end, debug.traceback)
+
+    if not ok then
+      log.error("Unhandled error in test execution:\n%s", err)
       finish(1)
-      return
     end
-
-    set_progress("running tests")
-    local test_run_succeded, trx_results_directory = runner.run_tests(filter, args)
-
-    if not test_run_succeded then
-      set_progress("test run failed", true)
-      finish(1)
-      return
-    end
-
-    set_progress("parsing test result", false)
-    local parse_succeded, test_summary = parser.parse_test_result(trx_results_directory)
-
-    if not parse_succeded or not test_summary then
-      set_progress("parsing trx report(s) failed", true)
-      finish(1)
-      return
-    end
-
-    set_progress("trx report(s) parsed", true)
-
-    local any_test_failed = test_summary.failed > 0
-    if any_test_failed then
-      qflist.set_qflist(test_summary.tests)
-    else
-      local msg = string.format(
-        "Test summary: Total: %s, Failed: %s, Succeeded: %s",
-        test_summary.total,
-        test_summary.failed,
-        test_summary.passed
-      )
-      log.info(msg)
-      vim.notify(msg, vim.log.levels.INFO)
-    end
-
-    finish(any_test_failed and 1 or 0)
   end)
 end

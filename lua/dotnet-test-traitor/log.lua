@@ -10,6 +10,11 @@ M.levels = {
 
 M.level = M.levels.DEBUG
 
+M.sinks = {
+  file = true,
+  stderr = false,
+}
+
 local log_path = vim.fn.stdpath("state") .. "/dotnet-test-traitor.log"
 
 ---@param level string
@@ -23,10 +28,16 @@ local function log(level, message)
   local time = os.date("%Y-%m-%d %H:%M:%S")
   local line = string.format("[%s] [%s] %s\n", time, level, message)
 
-  local file = io.open(log_path, "a")
-  if file then
-    file:write(line)
-    file:close()
+  if M.sinks.stderr then
+    io.stderr:write(line)
+  end
+
+  if M.sinks.file then
+    local file = io.open(log_path, "a")
+    if file then
+      file:write(line)
+      file:close()
+    end
   end
 end
 

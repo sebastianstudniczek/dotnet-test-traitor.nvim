@@ -1,0 +1,14 @@
+return {
+  _all = {
+    coverage = false,
+    lpath = "lua/?.lua;lua/?/init.lua;tests/?.lua",
+    lua = "nvim -u NONE -U NONE -N -i NONE -l",
+  },
+  default = {
+    helper = "./tests/minimal_init.lua",
+    verbose = true,
+  },
+  tests = {
+    verbose = true,
+  },
+}
