@@ -1,5 +1,8 @@
 local M = {}
 
+local async = require("dotnet-test-traitor.async")
+local log = require("dotnet-test-traitor.log")
+
 ---@param filter dotnet-test-traitor.TestFilter
 ---@return string[]
 local function get_filter_args(filter)
@@ -14,94 +17,69 @@ local function get_filter_args(filter)
   end
 end
 
----@param cb fun(result: vim.SystemCompleted)
-local function build(cb)
-  vim.system({ "dotnet", "build", "/clp:ErrorsOnly" }, {
-    text = true,
-  }, function(result)
-    local output = result.stdout .. "\n" .. result.stderr
-    local lines = vim.split(output, "\n", { plain = true })
+---@param filter dotnet-test-traitor.TestFilter
+---@param args string[]|nil
+---@return string[] cmd, string trx_results_directory
+local function prepare_test_cmd(filter, args)
+  local results_directory = vim.loop.os_tmpdir() .. "/nvim/dotnet-test-traitor/tests_results_" .. os.time()
+  vim.fn.mkdir(results_directory, "p")
 
-    vim.schedule(function()
-      vim.fn.setqflist({}, " ", {
-        title = "dotnet build",
-        lines = lines,
-        efm = table.concat({
-          "%f(%l\\,%c): %trror %m",
-          "%f(%l): %trror %m",
-          "%-G%.%#", -- ignore-other lines
-        }, ","),
-      })
+  local test_command = {
+    "dotnet",
+    "test",
+    -- "/clp:ErrorsOnly",
+  }
 
-      if result.code ~= 0 then
-        require("trouble").open({ mode = "quickfix", focus = false })
-      end
+  vim.list_extend(test_command, get_filter_args(filter))
 
-      cb(result)
-    end)
-  end)
+  if filter.is_vstest then
+    vim.list_extend(test_command, { "--logger", "trx" })
+  else
+    table.insert(test_command, "--report-trx")
+  end
+
+  vim.list_extend(test_command, { "--results-directory", results_directory })
+  vim.list_extend(test_command, args or {})
+
+  return test_command, results_directory
 end
 
 ---@param filter dotnet-test-traitor.TestFilter Test filter to apply
----@param args string[]|nil Additional arguments passed into `dotnet test` command
----@param cb fun(runner_exit_code: number, logFilePath: string, progress) Callback to handle the path to the test results log file
-M.run_tests = function(filter, args, cb)
-  local spinner = require("fidget.progress").handle.create({
-    title = "Running tests",
-    message = "building project",
-    lsp_client = {
-      name = "dotnet-test-traitor",
-    },
-  })
+---@param args? string[] Additional arguments passed into `dotnet test` command
+---@return boolean success, string? trx_results_directory
+M.run_tests = function(filter, args)
+  local test_command, trx_resulsts_directory = prepare_test_cmd(filter, args)
+  log.debug("Executing: %s", vim.inspect(test_command))
 
-  build(function(build_result)
-    if build_result.code ~= 0 then
-      spinner.message = "build failed"
-      spinner:finish()
+  local test_result = async.system(test_command, { text = true })
+  log.debug("[test run stdout]:\n%s", test_result.stdout or "")
+  log.debug("[test run stderr]:\n%s", test_result.stderr or "")
 
-      cb(build_result.code, "", spinner)
-      return
-    end
+  if test_result.code == 1 then
+    local output = test_result.stdout .. "\n" .. test_result.stderr
+    local lines = vim.split(output, "\n", { plain = true })
 
-    spinner.message = "running tests"
+    vim.fn.setqflist({}, " ", {
+      title = "dotnet build",
+      lines = lines,
+      efm = table.concat({
+        "%f(%l\\,%c): %trror %m",
+        "%f(%l): %trror %m",
+        "%-G%.%#", -- ignore-other lines
+      }, ","),
+    })
 
-    local results_directory = vim.loop.os_tmpdir() .. "/nvim/dotnet-test-traitor/tests_results_" .. os.time()
-    vim.fn.mkdir(results_directory, "p")
+    require("trouble").open({ mode = "quickfix", focus = false })
+    return false, nil
+  end
 
-    local test_command = {
-      "dotnet",
-      "test",
-      "--no-build",
-    }
+  -- 2 - at least one test failed
+  local success = test_result.code == 2 or test_result.code == 0
+  if not success then
+    log.error("Test execution failed: %s%s", test_result.stdout, test_result.stderr)
+  end
 
-    vim.list_extend(test_command, get_filter_args(filter))
-
-    if filter.is_vstest then
-      vim.list_extend(test_command, { "--logger", "trx" })
-    else
-      table.insert(test_command, "--report-trx")
-    end
-
-    vim.list_extend(test_command, { "--results-directory", results_directory })
-    vim.list_extend(test_command, args or {})
-
-    vim.notify("Executing: " .. vim.inspect(test_command), vim.log.levels.TRACE)
-
-    vim.system(test_command, { text = true }, function(result)
-      vim.schedule(function()
-        if result.code ~= 0 then
-          spinner.message = "test run failed"
-          spinner:finish()
-
-          vim.notify(result.stdout .. result.stderr, vim.log.levels.ERROR)
-        else
-          spinner.message = "test run completed"
-        end
-
-        cb(result.code, results_directory, spinner)
-      end)
-    end)
-  end)
+  return success, trx_resulsts_directory
 end
 
 return M

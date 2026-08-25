@@ -1,0 +1,50 @@
+name: Test
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches:
+    - main
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    strategy:
+      max-parallel: 1
+      matrix:
+        os: [ubuntu-latest]
+        neovim: [stable, nightly]
+        luaVersion: ["luajit-openresty"]
+
+    runs-on: ${{ matrix.os }}
+    name: "OS: ${{ matrix.os }} - Neovim: ${{ matrix.neovim }} - Lua: ${{ matrix.luaVersion }}"
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@master
+
+    - name: Install Neovim
+      uses: rhysd/action-setup-vim@v1
+      with:
+        neovim: true
+        version: ${{ matrix.neovim }}
+
+    - name: Install Lua
+      uses: luarocks/gh-actions-lua@v13
+      with:
+        luaVersion: "${{ matrix.luaVersion }}"
+
+    - name: Install LuaRocks
+      # TODO: Replace with https://github.com/luarocks/gh-actions-luarocks after v6+
+      uses: ColinKennedy/gh-actions-luarocks@v1.0.0
+
+    - name: Print Versions
+      run: luarocks --version
+
+    - name: Install Busted
+      run: luarocks install busted
+
+    - name: Test
+      run: busted tests

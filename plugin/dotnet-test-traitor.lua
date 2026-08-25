@@ -11,7 +11,7 @@ vim.api.nvim_create_autocmd("FileType", {
         if filter == nil then
           return
         end
-        require("dotnet-test-traitor.run")({ value = filter })
+        require("dotnet-test-traitor.execute")(filter)
       end)
     end, { buffer = event.buf, desc = "Run Test Category" })
   end,

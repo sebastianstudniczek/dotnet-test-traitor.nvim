@@ -1,9 +1,12 @@
 local M = {}
 
+local async = require("dotnet-test-traitor.async")
+local log = require("dotnet-test-traitor.log")
+
 ---@param results_directory_path string Path to the directory containing .trx files
----@param cb fun(results: dotnet-test-traitor.TestSummary) Callback to handle parsed results
-M.parse_test_result = function(results_directory_path, cb)
-  local script_path = vim.api.nvim_get_runtime_file("scripts/test_parser.cs", true)[1]
+---@return boolean success, dotnet-test-traitor.TestSummary? test_summary
+M.parse_test_result = function(results_directory_path)
+  local script_path = vim.api.nvim_get_runtime_file("scripts/trx_reports_parser.cs", true)[1]
   local command = {
     "dotnet",
     "run",
@@ -12,26 +15,27 @@ M.parse_test_result = function(results_directory_path, cb)
     results_directory_path,
   }
 
-  vim.notify("Executing: " .. table.concat(command, " "), "trace")
+  log.debug("Executing: %s", table.concat(command, " "))
 
-  vim.system(command, {
+  local result = async.system(command, {
     text = true,
-  }, function(result)
-    vim.schedule(function()
-      if result.code == 1 then
-        vim.notify(result.stderr, vim.log.levels.ERROR)
-        return
-      end
+  })
 
-      local ok, decoded = pcall(vim.json.decode, result.stdout)
+  if result.code == 1 then
+    vim.notify(result.stderr, vim.log.levels.ERROR)
+    log.error("Parser error: %s", result.stderr)
+    return false
+  end
 
-      if ok and decoded then
-        cb(decoded)
-      else
-        vim.notify("Failed to decode test parser output:\n" .. result.stdout, vim.log.levels.ERROR)
-      end
-    end)
-  end)
+  local ok, decoded = pcall(vim.json.decode, result.stdout)
+
+  if ok and decoded then
+    return true, decoded
+  else
+    vim.notify("Failed to decode test parser output:\n" .. result.stdout, vim.log.levels.ERROR)
+    log.error("Failed to decode test parser output:\n%s", result.stdout)
+    return false
+  end
 end
 
 return M
